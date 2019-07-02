@@ -1,19 +1,32 @@
 package application.entities;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
-@Entity // This tells Hibernate to make a table out of this class
+@Entity
 public class User {
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
-
+    @Column(unique = true)
+    private String account;
     private String name;
-
+    private String phone;
+    private String address;
     private String email;
+    private int status;
+
+    public User(){
+
+    }
+
+    public User(String account, String name, String phone, String address, String email) {
+        this.account = account;
+        this.name = name;
+        this.phone = phone;
+        this.address = address;
+        this.email = email;
+        this.status = 0;
+    }
 
     public Integer getId() {
         return id;
@@ -21,6 +34,14 @@ public class User {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
     }
 
     public String getName() {
@@ -31,6 +52,22 @@ public class User {
         this.name = name;
     }
 
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -39,5 +76,11 @@ public class User {
         this.email = email;
     }
 
+    public int getStatus() {
+        return status;
+    }
 
+    public void setStatus(int status) {
+        this.status = status;
+    }
 }
