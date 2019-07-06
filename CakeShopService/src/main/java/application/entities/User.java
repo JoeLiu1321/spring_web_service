@@ -13,7 +13,6 @@ public class User {
     private String phone;
     private String address;
     private String email;
-    private int status;
 
     public User(){
 
@@ -25,7 +24,6 @@ public class User {
         this.phone = phone;
         this.address = address;
         this.email = email;
-        this.status = 0;
     }
 
     public Integer getId() {
@@ -76,11 +74,4 @@ public class User {
         this.email = email;
     }
 
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
-    }
 }
