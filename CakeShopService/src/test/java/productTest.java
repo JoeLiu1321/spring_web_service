@@ -1,6 +1,7 @@
 import application.Application;
 import application.entities.Product;
 import application.repositories.ProductRepository;
+import com.google.gson.Gson;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -8,6 +9,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -29,27 +31,76 @@ public class productTest {
     private ProductRepository productRepository;
     private RequestBuilder createProductRequest,deleteProductRequest;
     private String productName="Test Product",productDescription="This is the test product";
+    private Product product;
     private Integer productPrice=1000;
     @Before
     public void setUp(){
+        product=new Product(productName,productDescription,productPrice);
         createProductRequest=post("/product/create")
-                .param("name",productName)
-                .param("description",productDescription)
-                .param("price",productPrice.toString());
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(new Gson().toJson(product));
         deleteProductRequest=delete("/product/delete")
-                .param("id","1");
+                .param("name",productName);
     }
     @After
     public void tearDown()throws Exception{
         this.mockMvc.perform(deleteProductRequest);
     }
+
+    @Test
+    public void addDuplicateProduct()throws Exception{
+        this.mockMvc.perform(createProductRequest);
+        Optional<Product> product=productRepository.findByName(productName);
+        assertEquals(productName,product.get().getName());
+        this.mockMvc.perform(post("/product/create")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(new Gson().toJson(product.get()))).andExpect(content().string("success"));
+    }
+
     @Test
     public void addProduct()throws Exception{
         this.mockMvc.perform(createProductRequest).andExpect(content().string("success"));
-        Optional<Product>product=productRepository.findById(1);
+        Optional<Product>product=productRepository.findByName(productName);
         assertEquals(productName, product.get().getName());
         assertEquals(productDescription, product.get().getDescription());
         assertEquals(productPrice, product.get().getPrice());
         assertFalse(product.get().getOnSell());
     }
+
+    @Test
+    public void deleteProduct()throws Exception{
+        this.mockMvc.perform(createProductRequest);
+        this.mockMvc.perform(deleteProductRequest).andExpect(content().string("success"));
+        this.mockMvc.perform(deleteProductRequest).andExpect(content().string("fail:product not found"));
+    }
+
+    @Test
+    public void updateProduct()throws Exception{
+        Product product=new Product();
+        product.setName("OldName");
+        productRepository.save(product);
+        product=productRepository.findByName("OldName").get();
+        product.setName("newName");
+        product.setDescription("New Description");
+
+        Gson gson=new Gson();
+        String json=gson.toJson(product);
+        this.mockMvc.perform(post("/product/update")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(json))
+                .andExpect(content().string("success"));
+        assertEquals("newName",productRepository.findAll().iterator().next().getName());
+    }
+
+    @Test
+    public void findProduct()throws Exception{
+        this.mockMvc.perform(createProductRequest);
+        Product product=productRepository.findByName(productName).get();
+        Integer productId=product.getId();
+        this.mockMvc.perform(get("/product/getProduct")
+                .param("id",productId.toString()))
+                .andExpect(content().json(new Gson().toJson(product)));
+    }
+
+
 }

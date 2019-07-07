@@ -1,22 +1,22 @@
 package application.controllers;
 
+import application.entities.AccountInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import application.entities.User;
-import application.repositories.UserRepository;
+import application.repositories.AccountInfoRepository;
 
 @Controller
 @RequestMapping(path="/user")
-public class UserController {
+public class AccountInfoController {
     @Autowired
-    private UserRepository userRepository;
+    private AccountInfoRepository accountInfoRepository;
 
     @RequestMapping(method = RequestMethod.GET)
-    public @ResponseBody Iterable<User> getAllUsers() {
+    public @ResponseBody Iterable<AccountInfo> getAllUsers() {
         // This returns a JSON or XML with the users
-        return userRepository.findAll();
+        return accountInfoRepository.findAll();
     }
 
 

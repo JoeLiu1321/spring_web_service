@@ -3,23 +3,21 @@ package application.entities;
 import javax.persistence.*;
 
 @Entity
-public class User {
+public class AccountInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
     @Column(unique = true)
-    private String account;
     private String name;
     private String phone;
     private String address;
     private String email;
 
-    public User(){
+    public AccountInfo(){
 
     }
 
-    public User(String account, String name, String phone, String address, String email) {
-        this.account = account;
+    public AccountInfo(String name, String phone, String address, String email) {
         this.name = name;
         this.phone = phone;
         this.address = address;
@@ -32,14 +30,6 @@ public class User {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public String getAccount() {
-        return account;
-    }
-
-    public void setAccount(String account) {
-        this.account = account;
     }
 
     public String getName() {

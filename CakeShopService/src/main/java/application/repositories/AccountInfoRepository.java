@@ -1,12 +1,10 @@
 package application.repositories;
+import application.entities.AccountInfo;
 import org.springframework.data.repository.CrudRepository;
-
-import application.entities.User;
 
 // This will be AUTO IMPLEMENTED by Spring into a Bean called userRepository
 // CRUD refers Create, Read, Update, Delete
 
-public interface UserRepository extends CrudRepository<User, Integer> {
-    User findByAccount(String account);
+public interface AccountInfoRepository extends CrudRepository<AccountInfo, Integer> {
 
 }

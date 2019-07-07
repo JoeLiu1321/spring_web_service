@@ -1,7 +1,5 @@
 package application.entities;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-
 import javax.persistence.*;
 
 @Entity
@@ -31,8 +29,24 @@ public class Product {
 
     }
 
+    public void setProduct(Product product){
+        this.name=product.name;
+        this.description = product.description;
+        this.onSell = product.onSell;
+        this.price = product.price;
+        this.volume = product.volume;
+    }
+
     public String getName() {
         return name;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Integer getId() {
+        return id;
     }
 
     public String getDescription() {
