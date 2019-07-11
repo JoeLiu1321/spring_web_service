@@ -15,34 +15,34 @@ public class ProductController {
     @Autowired
     ProductRepository productRepository;
 
-    @RequestMapping(path="/create", method = RequestMethod.POST)
+    @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody String createProduct(@RequestBody Product product){
         productRepository.save(product);
         return "success";
     }
 
-    @RequestMapping(path = "/getAll", method = RequestMethod.GET)
+    @RequestMapping(method = RequestMethod.GET)
     public @ResponseBody Iterable<Product> getAllProduct(){
         return productRepository.findAll();
     }
 
-    @RequestMapping(path = "/getProduct", method = RequestMethod.GET)
-    public @ResponseBody Optional<Product> getProduct(@RequestParam Integer id){
+    @RequestMapping(path = "/{id}", method = RequestMethod.GET)
+    public @ResponseBody Optional<Product> getProduct(@PathVariable Integer id){
         return productRepository.findById(id);
     }
 
-    @RequestMapping(path="/delete", method=RequestMethod.DELETE)
-    public @ResponseBody String deleteProduct(@RequestParam Integer id){
-        try {
-            productRepository.deleteById(id);
-            return "success";
-        }catch (Exception e){
-            return "fail:product not found";
-        }
-    }
+//    @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
+//    public @ResponseBody String deleteProduct(@PathVariable Integer id){
+//        try {
+//            productRepository.deleteById(id);
+//            return "success";
+//        }catch (Exception e){
+//            return "fail:product not found";
+//        }
+//    }
 
-    @RequestMapping(path="/delete", method=RequestMethod.DELETE,params = {"name"})
-    public @ResponseBody String deleteProduct(@Param("name") String name){
+    @RequestMapping(path="/{name}", method=RequestMethod.DELETE)
+    public @ResponseBody String deleteProduct(@PathVariable String name){
         try {
             Optional<Product> product=productRepository.findByName(name);
             productRepository.delete(product.get());
@@ -53,8 +53,8 @@ public class ProductController {
         }
     }
 
-    @RequestMapping(path="/update", method=RequestMethod.POST)
-    public @ResponseBody String updateProduct(@RequestBody Optional<Product> product){
+    @RequestMapping(path="/{id}", method=RequestMethod.PATCH)
+    public @ResponseBody String updateProduct(@PathVariable Integer id, @RequestBody Optional<Product> product){
         if(product.isPresent() && product.get().getId()!=null) {
             Optional<Product> oldProduct=productRepository.findById(product.get().getId());
             if(oldProduct.isPresent()) {

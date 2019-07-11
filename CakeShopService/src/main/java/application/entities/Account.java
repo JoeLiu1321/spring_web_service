@@ -11,9 +11,8 @@ public class Account {
     @Column(unique = true)
     private String accountName;
     private String password;
-    @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "privilegeId")
-    private Privilege privilege;
+    @Column(columnDefinition = "integer default 1")
+    private Integer privilege;
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name="accountId")
     private AccountInfo info;
@@ -26,11 +25,21 @@ public class Account {
         this.password = password;
     }
 
-    public String getPrivilege() {
-        return privilege.getPrililege();
+    public void setAccount(Account account){
+        setPassword(account.getPassword());
+        setPrivilege(account.getPrivilege());
+        setInfo(account.getInfo());
     }
 
-    public void setPrivilege(Privilege privilege) {
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Integer getPrivilege() {
+        return privilege;
+    }
+
+    public void setPrivilege(Integer privilege) {
         this.privilege = privilege;
     }
 

@@ -36,11 +36,10 @@ public class productTest {
     @Before
     public void setUp(){
         product=new Product(productName,productDescription,productPrice);
-        createProductRequest=post("/product/create")
+        createProductRequest=post("/product")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(product));
-        deleteProductRequest=delete("/product/delete")
-                .param("name",productName);
+        deleteProductRequest=delete("/product/"+productName);
     }
     @After
     public void tearDown()throws Exception{
@@ -52,7 +51,7 @@ public class productTest {
         this.mockMvc.perform(createProductRequest);
         Optional<Product> product=productRepository.findByName(productName);
         assertEquals(productName,product.get().getName());
-        this.mockMvc.perform(post("/product/create")
+        this.mockMvc.perform(post("/product")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(product.get()))).andExpect(content().string("success"));
     }
@@ -80,16 +79,12 @@ public class productTest {
         product.setName("OldName");
         productRepository.save(product);
         product=productRepository.findByName("OldName").get();
-        product.setName("newName");
         product.setDescription("New Description");
-
-        Gson gson=new Gson();
-        String json=gson.toJson(product);
-        this.mockMvc.perform(post("/product/update")
+        this.mockMvc.perform(patch("/product/"+product.getId())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
-                .content(json))
+                .content(new Gson().toJson((product))))
                 .andExpect(content().string("success"));
-        assertEquals("newName",productRepository.findAll().iterator().next().getName());
+        assertEquals("New Description",productRepository.findAll().iterator().next().getDescription());
     }
 
     @Test
@@ -97,8 +92,7 @@ public class productTest {
         this.mockMvc.perform(createProductRequest);
         Product product=productRepository.findByName(productName).get();
         Integer productId=product.getId();
-        this.mockMvc.perform(get("/product/getProduct")
-                .param("id",productId.toString()))
+        this.mockMvc.perform(get("/product/"+productId))
                 .andExpect(content().json(new Gson().toJson(product)));
     }
 

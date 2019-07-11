@@ -7,7 +7,6 @@ public class AccountInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
-    @Column(unique = true)
     private String name;
     private String phone;
     private String address;
