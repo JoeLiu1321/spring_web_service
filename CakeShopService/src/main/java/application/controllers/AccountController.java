@@ -12,7 +12,11 @@ import java.util.Optional;
 public class AccountController {
     @Autowired
     private AccountRepository accountRepository;
-
+    @CrossOrigin
+    @RequestMapping(method = RequestMethod.GET, path="/test")
+    public @ResponseBody String testRequest(){
+        return "success";
+    }
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody String createAccount(@RequestBody Optional<Account> account){
         Optional<String>accountName=Optional.ofNullable(account.get().getAccountName());

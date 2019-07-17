@@ -7,6 +7,7 @@ public class AccountInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+    private String identify;
     private String name;
     private String phone;
     private String address;
@@ -16,11 +17,20 @@ public class AccountInfo {
 
     }
 
+
     public AccountInfo(String name, String phone, String address, String email) {
         this.name = name;
         this.phone = phone;
         this.address = address;
         this.email = email;
+    }
+
+    public String getIdentify() {
+        return identify;
+    }
+
+    public void setIdentify(String identify) {
+        this.identify = identify;
     }
 
     public Integer getId() {
