@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 
 @Controller
+@CrossOrigin
 @RequestMapping(path="/account")
 public class AccountController {
     @Autowired
     private AccountRepository accountRepository;
-    @CrossOrigin
     @RequestMapping(method = RequestMethod.GET, path="/test")
     public @ResponseBody String testRequest(){
         return "success";
