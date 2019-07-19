@@ -1,4 +1,5 @@
 import application.Application;
+import application.ResponseMessage;
 import application.entities.Account;
 import application.entities.AccountInfo;
 import application.repositories.AccountRepository;
@@ -57,31 +58,38 @@ public class accountTest {
 
     @Test
     public void deleteNotExistedAccount()throws Exception{
-        mockMvc.perform(deleteAccountRequest).andExpect(content().string("Fail:Account not found"));
+        ResponseMessage responseMessage=new ResponseMessage(false,"Account not found");
+        mockMvc.perform(deleteAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
     }
 
     @Test
     public void deleteExistedAccount()throws Exception{
-        mockMvc.perform(deleteAccountRequest).andExpect(content().string("Fail:Account not found"));
+        ResponseMessage responseMessage=new ResponseMessage(false,"Account not found");
+        mockMvc.perform(deleteAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals(Optional.empty(),accountRepository.findByAccountName(account.getAccountName()));
     }
 
     @Test
     public void addDuplicateAccount()throws Exception{
-        this.mockMvc.perform(addAccountRequest).andExpect(content().string("success"));
-        this.mockMvc.perform(addAccountRequest).andExpect(content().string("This account had been used"));
+        ResponseMessage responseMessage=new ResponseMessage(true,"success");
+        this.mockMvc.perform(addAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
+        responseMessage=new ResponseMessage(false,"This account had been used");
+        this.mockMvc.perform(addAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals(account.getAccountName(),accountRepository.findByAccountName(account.getAccountName()).get().getAccountName());
     }
 
     @Test
     public void addAccount() throws Exception{
-        this.mockMvc.perform(addAccountRequest).andExpect(content().string("success"));
+        ResponseMessage responseMessage=new ResponseMessage(true,"success");
+        this.mockMvc.perform(addAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals(account.getAccountName(),accountRepository.findByAccountName(account.getAccountName()).get().getAccountName());
+        responseMessage=new ResponseMessage(false,"Account Name is not present");
         this.mockMvc.perform(post("/account")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(new Account())))
-                .andExpect(content().string("Account Name is not present"));
-        this.mockMvc.perform(addAccountRequest).andExpect(content().string("This account had been used"));
+                .andExpect(content().json(new Gson().toJson(responseMessage)));
+        responseMessage.setMessage("This account had been used");
+        this.mockMvc.perform(addAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
     }
 
     @Test
@@ -93,53 +101,60 @@ public class accountTest {
 
     @Test
     public void login()throws Exception{
+        ResponseMessage responseMessage=new ResponseMessage(false,"Account not found");
         mockMvc.perform(loginRequest)
-                .andExpect(content().string("fail"));
+                .andExpect(content().json(new Gson().toJson(responseMessage)));
         mockMvc.perform(addAccountRequest);
+        responseMessage=new ResponseMessage(true,"success");
         mockMvc.perform(loginRequest)
-                .andExpect(content().string("success"));
+                .andExpect(content().json(new Gson().toJson(responseMessage)));
     }
 
     @Test
     public void logout()throws Exception{
+        ResponseMessage responseMessage=new ResponseMessage(false,"Account not found");
         RequestBuilder logout=post("/account/logout")
                 .param("accountName",account.getAccountName());
-        mockMvc.perform(logout).andExpect(content().string("fail"));
+        mockMvc.perform(logout).andExpect(content().json(new Gson().toJson(responseMessage)));
         mockMvc.perform(addAccountRequest);
-        mockMvc.perform(logout).andExpect(content().string("success"));
+        responseMessage=new ResponseMessage(true,"success");
+        mockMvc.perform(logout).andExpect(content().json(new Gson().toJson(responseMessage)));
     }
 
     @Test
     public void inValidateExistedAccount()throws Exception{
+        ResponseMessage responseMessage=new ResponseMessage(true,"success");
         mockMvc.perform(addAccountRequest);
         account.setPrivilege(0);
         mockMvc.perform(patch("/account/"+account.getAccountName())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(account)))
-                .andExpect(content().string("success"));
+                .andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals(0,accountRepository.findByAccountName(account.getAccountName()).get().getPrivilege(),0);
     }
 
     @Test
     public void setPassword()throws Exception{
+        ResponseMessage responseMessage=new ResponseMessage(true,"success");
         mockMvc.perform(addAccountRequest);
         String newPassword="newPasswordTim98765";
         account.setPassword(newPassword);
         mockMvc.perform(patch("/account/"+account.getAccountName())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(account)))
-                .andExpect(content().string("success"));
+                .andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals(newPassword,accountRepository.findByAccountName(account.getAccountName()).get().getPassword());
     }
 
     @Test
     public void updateAccountInfo()throws Exception{
+        ResponseMessage responseMessage=new ResponseMessage(true,"success");
         mockMvc.perform(addAccountRequest);
         accountInfo.setName("newNAme");
         mockMvc.perform(patch("/account/"+account.getAccountName())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(account)))
-                .andExpect(content().string("success"));
+                .andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals("newNAme",accountRepository.findByAccountName(account.getAccountName()).get().getInfo().getName());
     }
 }

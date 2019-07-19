@@ -1,5 +1,6 @@
 package application.controllers;
 
+import application.ResponseMessage;
 import application.entities.Account;
 import application.repositories.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,50 +19,50 @@ public class AccountController {
         return "success";
     }
     @RequestMapping(method = RequestMethod.POST)
-    public @ResponseBody String createAccount(@RequestBody Optional<Account> account){
+    public @ResponseBody ResponseMessage createAccount(@RequestBody Optional<Account> account){
         Optional<String>accountName=Optional.ofNullable(account.get().getAccountName());
         if(!accountName.isPresent())
-            return "Account Name is not present";
+            return new ResponseMessage(false,"Account Name is not present");
         else{
             Account newAccount=account.get();
             Boolean isUsed = accountRepository.findByAccountName(newAccount.getAccountName()).isPresent();
             if (isUsed)
-                return "This account had been used";
+                return new ResponseMessage(false,"This account had been used");
             else {
-//                newAccount.setPrivilege(1);
                 accountRepository.save(newAccount);
-                return "success";
+                return new ResponseMessage(true,"success");
             }
         }
     }
 
     @RequestMapping(path="/{accountName}", method = RequestMethod.DELETE)
-    public @ResponseBody String deleteAccount(@PathVariable String accountName){
+    public @ResponseBody ResponseMessage deleteAccount(@PathVariable String accountName){
         Optional<Account> account=accountRepository.findByAccountName(accountName);
         if(!account.isPresent())
-            return "Fail:Account not found";
+            return new ResponseMessage(false,"Account not found");
         else {
             accountRepository.delete(account.get());
-            return "success";
+            return new ResponseMessage(true,"success");
         }
     }
 
     @RequestMapping(path="/login", method = RequestMethod.POST)
-    public @ResponseBody String login(@RequestParam String accountName, @RequestParam String password){
+    public @ResponseBody ResponseMessage login(@RequestParam String accountName, @RequestParam String password){
         Optional<Account> account=accountRepository.findByAccountNameAndPassword(accountName,password);
+        ResponseMessage responseMessage=new ResponseMessage(false);
         if(account.isPresent())
-            return "success";
+            return new ResponseMessage(true,"success");
         else
-            return "fail";
+            return new ResponseMessage(false,"Account not found");
     }
 
     @RequestMapping(path="/logout", method = RequestMethod.POST)
-    public @ResponseBody String logout(@RequestParam String accountName){
+    public @ResponseBody ResponseMessage logout(@RequestParam String accountName){
         Optional<Account> account=accountRepository.findByAccountName(accountName);
         if(account.isPresent())
-            return "success";
+            return new ResponseMessage(true,"success");
         else
-            return "fail";
+            return new ResponseMessage(false,"Account not found");
     }
 
     @RequestMapping(method=RequestMethod.GET)
@@ -79,16 +80,16 @@ public class AccountController {
     }
 
     @PatchMapping(path="/{accountName}")
-    public @ResponseBody String update(@PathVariable String accountName, @RequestBody Account account) {
+    public @ResponseBody ResponseMessage update(@PathVariable String accountName, @RequestBody Account account) {
         Optional<Account> existedAccount = accountRepository.findByAccountName(accountName);
         if (existedAccount.isPresent()) {
             Account updatedAccount=existedAccount.get();
             updatedAccount.setAccount(account);
             accountRepository.save(updatedAccount);
-            return "success";
+            return new ResponseMessage(true,"success");
         }
         else
-            return "fail";
+            return new ResponseMessage(false,"fail");
     }
 
 }
