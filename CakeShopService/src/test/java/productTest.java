@@ -1,4 +1,5 @@
 import application.Application;
+import application.ResponseMessage;
 import application.entities.Product;
 import application.repositories.ProductRepository;
 import com.google.gson.Gson;
@@ -33,6 +34,8 @@ public class productTest {
     private String productName="Test Product",productDescription="This is the test product";
     private Product product;
     private Integer productPrice=1000;
+    private Gson gson;
+    private ResponseMessage successMsg,failMsg;
     @Before
     public void setUp(){
         product=new Product(productName,productDescription,productPrice);
@@ -40,6 +43,9 @@ public class productTest {
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson(product));
         deleteProductRequest=delete("/product/"+productName);
+        gson=new Gson();
+        successMsg=new ResponseMessage(true,"success");
+        failMsg=new ResponseMessage(false,"product not found");
     }
     @After
     public void tearDown()throws Exception{
@@ -53,12 +59,12 @@ public class productTest {
         assertEquals(productName,product.get().getName());
         this.mockMvc.perform(post("/product")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
-                .content(new Gson().toJson(product.get()))).andExpect(content().string("success"));
+                .content(new Gson().toJson(product.get()))).andExpect(content().json(gson.toJson(successMsg)));
     }
 
     @Test
     public void addProduct()throws Exception{
-        this.mockMvc.perform(createProductRequest).andExpect(content().string("success"));
+        this.mockMvc.perform(createProductRequest).andExpect(content().json(gson.toJson(successMsg)));
         Optional<Product>product=productRepository.findByName(productName);
         assertEquals(productName, product.get().getName());
         assertEquals(productDescription, product.get().getDescription());
@@ -69,8 +75,8 @@ public class productTest {
     @Test
     public void deleteProduct()throws Exception{
         this.mockMvc.perform(createProductRequest);
-        this.mockMvc.perform(deleteProductRequest).andExpect(content().string("success"));
-        this.mockMvc.perform(deleteProductRequest).andExpect(content().string("fail:product not found"));
+        this.mockMvc.perform(deleteProductRequest).andExpect(content().json(gson.toJson(successMsg)));
+        this.mockMvc.perform(deleteProductRequest).andExpect(content().json(gson.toJson(failMsg)));
     }
 
     @Test
@@ -83,7 +89,7 @@ public class productTest {
         this.mockMvc.perform(patch("/product/"+product.getId())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(new Gson().toJson((product))))
-                .andExpect(content().string("success"));
+                .andExpect(content().json(gson.toJson(successMsg)));
         assertEquals("New Description",productRepository.findAll().iterator().next().getDescription());
     }
 

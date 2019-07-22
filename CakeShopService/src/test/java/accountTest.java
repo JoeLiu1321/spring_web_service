@@ -83,6 +83,7 @@ public class accountTest {
         ResponseMessage responseMessage=new ResponseMessage(true,"success");
         this.mockMvc.perform(addAccountRequest).andExpect(content().json(new Gson().toJson(responseMessage)));
         assertEquals(account.getAccountName(),accountRepository.findByAccountName(account.getAccountName()).get().getAccountName());
+        assertEquals(account.getInfo().getAddress(),accountRepository.findByAccountName(account.getAccountName()).get().getInfo().getAddress());
         responseMessage=new ResponseMessage(false,"Account Name is not present");
         this.mockMvc.perform(post("/account")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
@@ -101,7 +102,7 @@ public class accountTest {
 
     @Test
     public void login()throws Exception{
-        ResponseMessage responseMessage=new ResponseMessage(false,"Account not found");
+        ResponseMessage responseMessage=new ResponseMessage(false,"Account or Password Error");
         mockMvc.perform(loginRequest)
                 .andExpect(content().json(new Gson().toJson(responseMessage)));
         mockMvc.perform(addAccountRequest);
@@ -112,7 +113,7 @@ public class accountTest {
 
     @Test
     public void logout()throws Exception{
-        ResponseMessage responseMessage=new ResponseMessage(false,"Account not found");
+        ResponseMessage responseMessage=new ResponseMessage(false,"Account or Password Error");
         RequestBuilder logout=post("/account/logout")
                 .param("accountName",account.getAccountName());
         mockMvc.perform(logout).andExpect(content().json(new Gson().toJson(responseMessage)));

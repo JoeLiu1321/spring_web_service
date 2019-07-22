@@ -53,7 +53,7 @@ public class AccountController {
         if(account.isPresent())
             return new ResponseMessage(true,"success");
         else
-            return new ResponseMessage(false,"Account not found");
+            return new ResponseMessage(false,"Account or Password Error");
     }
 
     @RequestMapping(path="/logout", method = RequestMethod.POST)
@@ -62,7 +62,7 @@ public class AccountController {
         if(account.isPresent())
             return new ResponseMessage(true,"success");
         else
-            return new ResponseMessage(false,"Account not found");
+            return new ResponseMessage(false,"Account or Password Error");
     }
 
     @RequestMapping(method=RequestMethod.GET)
