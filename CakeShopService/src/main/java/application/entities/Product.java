@@ -7,7 +7,6 @@ import javax.persistence.*;
 @Entity
 public class Product {
     @Id
-    @Column(name="productId")
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
     @Column(name="productName")

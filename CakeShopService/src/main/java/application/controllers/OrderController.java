@@ -1,14 +1,18 @@
 package application.controllers;
 
+import application.ResponseMessage;
 import application.entities.Order;
 import application.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Controller
+@CrossOrigin
 @RequestMapping(path="/order")
 public class OrderController {
     @Autowired
@@ -16,9 +20,14 @@ public class OrderController {
 
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody
-    String createOrder(@RequestBody Order order){
+    ResponseMessage createOrder(@RequestBody Order order){
+        order.setFinish(false);
+        order.setPay(false);
+        LocalDateTime localDateTime=LocalDateTime.now();
+        DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm");
+        order.setTime(dateTimeFormatter.format(localDateTime));
         orderRepository.save(order);
-        return "success";
+        return new ResponseMessage(true,"success");
     }
 
     @RequestMapping(method = RequestMethod.GET)
@@ -33,14 +42,13 @@ public class OrderController {
     }
 
     @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
-    public @ResponseBody String deleteOrder(@PathVariable Integer id){
+    public @ResponseBody ResponseMessage deleteOrder(@PathVariable Integer id){
         try {
             Optional<Order> order=orderRepository.findById(id);
             orderRepository.delete(order.get());
-            return "success";
+            return new ResponseMessage(true,"success");
         }catch (Exception e){
-//            return e.getMessage();
-            return "fail:order not found";
+            return new ResponseMessage(false,"order not found");
         }
     }
 

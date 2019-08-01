@@ -9,19 +9,37 @@ public class Order {
     @Column(name="orderId")
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne
     @JoinColumn(name="productId")
     private Product product;
     private String accountName;
     private String time;
-    private String action;
+    private Boolean isPay;
+    private Boolean isFinish;
 
     public Order(){}
-    public Order(Product product, String accountName, String time, String action) {
+    public Order(Product product, String accountName, String time) {
         this.product = product;
         this.accountName = accountName;
         this.time = time;
-        this.action = action;
+        isPay=false;
+        isFinish=false;
+    }
+
+    public Boolean getPay() {
+        return isPay;
+    }
+
+    public void setPay(Boolean pay) {
+        isPay = pay;
+    }
+
+    public Boolean getFinish() {
+        return isFinish;
+    }
+
+    public void setFinish(Boolean finish) {
+        isFinish = finish;
     }
 
     public void setId(Integer id) {
@@ -34,10 +52,6 @@ public class Order {
 
     public void setTime(String time) {
         this.time = time;
-    }
-
-    public void setAction(String action) {
-        this.action = action;
     }
 
     public Integer getId() {
@@ -60,7 +74,4 @@ public class Order {
         return time;
     }
 
-    public String getAction() {
-        return action;
-    }
 }

@@ -1,4 +1,5 @@
 import application.Application;
+import application.ResponseMessage;
 import application.entities.Order;
 import application.entities.Product;
 import application.repositories.OrderRepository;
@@ -16,7 +17,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
@@ -33,28 +35,46 @@ public class orderTest {
     private RequestBuilder createOrderRequest,deleteOrderRequest;
     private Order order;
     private Product product;
+    private Gson gson;
     @Before
     public void setUp(){
+        gson=new Gson();
         product = new Product("Cake","TEST",1000);
-//        productRepository.save(product);
-        order=new Order(product,"GP","08:56","BUY");
+        order=new Order(product,"GP","08:56");
+        order.setPay(true);
+        order.setFinish(true);
+        productRepository.save(product);
         createOrderRequest=post("/order")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
-                .content(new Gson().toJson(order));
-//        orderRepository.findAll()
-//        deleteOrderRequest=delete("/order/"+productName);
+                .content(gson.toJson(order));
+
     }
-//    @After
-//    public void tearDown()throws Exception{
-//        this.mockMvc.perform(deleteProductRequest);
+    @After
+    public void tearDown()throws Exception {
+        orderRepository.deleteAll();
+        productRepository.deleteAll();
+//        orderRepository.deleteById(orderId);
+    }
 
     @Test
-    public void addProduct()throws Exception{
-        this.mockMvc.perform(createOrderRequest).andExpect(content().string("success"));
+    public void addOrder()throws Exception{
+        this.mockMvc.perform(createOrderRequest).andExpect(content().json(gson.toJson(new ResponseMessage(true,"success"))));
         Order order=orderRepository.findAll().iterator().next();
         assertEquals("GP", order.getAccountName());
-//        assertEquals(productDescription, product.get().getDescription());
-//        assertEquals(productPrice, product.get().getPrice());
-//        assertFalse(product.get().getOnSell());
+        assertEquals(false,order.getFinish());
+        assertEquals(false,order.getPay());
+    }
+
+    @Test
+    public void deleteOrder()throws Exception{
+        this.mockMvc.perform(createOrderRequest);
+        Integer orderId=orderRepository.findAll().iterator().next().getId();
+        deleteOrderRequest=delete("/order/"+orderId)
+                .contentType(MediaType.APPLICATION_JSON_UTF8);
+        this.mockMvc.perform(deleteOrderRequest)
+                .andExpect(content().json(gson.toJson(new ResponseMessage(true,"success"))));
+        assertFalse(orderRepository.findById(orderId).isPresent());
+        this.mockMvc.perform(deleteOrderRequest)
+                .andExpect(content().json(gson.toJson(new ResponseMessage(false,"order not found"))));
     }
 }
