@@ -1,5 +1,5 @@
 import application.Application;
-import application.ResponseMessage;
+import application.adapter.output.MessageOutputAdapter;
 import application.entities.Product;
 import application.repositories.ProductRepository;
 import com.google.gson.Gson;
@@ -35,7 +35,7 @@ public class productTest {
     private Product product;
     private Integer productPrice=1000;
     private Gson gson;
-    private ResponseMessage successMsg,failMsg;
+    private MessageOutputAdapter successMsg,failMsg;
     @Before
     public void setUp(){
         product=new Product(productName,productDescription,productPrice);
@@ -44,8 +44,8 @@ public class productTest {
                 .content(new Gson().toJson(product));
         deleteProductRequest=delete("/product/"+productName);
         gson=new Gson();
-        successMsg=new ResponseMessage(true,"success");
-        failMsg=new ResponseMessage(false,"product not found");
+        successMsg=new MessageOutputAdapter(true,"success");
+        failMsg=new MessageOutputAdapter(false,"product not found");
     }
     @After
     public void tearDown()throws Exception{

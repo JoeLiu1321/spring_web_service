@@ -17,12 +17,14 @@ public class Account {
     @JoinColumn(name="accountId")
     private AccountInfo info;
     public Account(){
-
+        privilege=0;
+        info=new AccountInfo();
     }
 
     public Account(String accountName, String password) {
-        this.accountName = accountName;
-        this.password = password;
+        this();
+        setAccountName(accountName);
+        setPassword(password);
     }
 
     public void setAccount(Account account){

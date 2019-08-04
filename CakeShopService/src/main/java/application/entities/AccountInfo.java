@@ -14,11 +14,15 @@ public class AccountInfo {
     private String email;
 
     public AccountInfo(){
-
+        identify="";
+        name="";
+        phone="";
+        address="";
+        email="";
     }
 
-
     public AccountInfo(String name, String phone, String address, String email) {
+        this();
         this.name = name;
         this.phone = phone;
         this.address = address;

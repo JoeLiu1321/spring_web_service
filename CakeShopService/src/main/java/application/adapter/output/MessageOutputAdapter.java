@@ -1,19 +1,19 @@
-package application;
+package application.adapter.output;
 
-public class ResponseMessage {
+public class MessageOutputAdapter {
     private Boolean status;
     private String message;
 
-    public ResponseMessage(Boolean status, String message) {
+    public MessageOutputAdapter(Boolean status, String message) {
         this.status = status;
         this.message = message;
     }
 
-    public ResponseMessage(){
+    public MessageOutputAdapter(){
 
     }
 
-    public ResponseMessage(Boolean status){
+    public MessageOutputAdapter(Boolean status){
         this.status=status;
     }
 

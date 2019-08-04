@@ -1,6 +1,8 @@
 package application.controllers;
 
-import application.ResponseMessage;
+import application.RedisService;
+import application.adapter.output.MessageOutputAdapter;
+import application.Session;
 import application.entities.Order;
 import application.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,17 +19,21 @@ import java.util.Optional;
 public class OrderController {
     @Autowired
     private OrderRepository orderRepository;
-
+    @Autowired
+    private RedisService redisService;
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody
-    ResponseMessage createOrder(@RequestBody Order order){
+    MessageOutputAdapter createOrder(@RequestParam String sessionKey, @RequestParam String sessionValue, @RequestBody Order order){
+        Session s=new Session(sessionKey,sessionValue);
+        if(!redisService.isSessionExist(s))
+            return new MessageOutputAdapter(false,"Session Timeout");
         order.setFinish(false);
         order.setPay(false);
         LocalDateTime localDateTime=LocalDateTime.now();
         DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm");
         order.setTime(dateTimeFormatter.format(localDateTime));
         orderRepository.save(order);
-        return new ResponseMessage(true,"success");
+        return new MessageOutputAdapter(true,"success");
     }
 
     @RequestMapping(method = RequestMethod.GET)
@@ -42,14 +48,15 @@ public class OrderController {
     }
 
     @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
-    public @ResponseBody ResponseMessage deleteOrder(@PathVariable Integer id){
-        try {
-            Optional<Order> order=orderRepository.findById(id);
+    public @ResponseBody
+    MessageOutputAdapter deleteOrder(@PathVariable Integer id){
+        Optional<Order> order=orderRepository.findById(id);
+        if(order.isPresent()) {
             orderRepository.delete(order.get());
-            return new ResponseMessage(true,"success");
-        }catch (Exception e){
-            return new ResponseMessage(false,"order not found");
+            return new MessageOutputAdapter(true, "success");
         }
+        else
+            return new MessageOutputAdapter(false,"order not found");
     }
 
 }

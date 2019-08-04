@@ -15,7 +15,6 @@ public class AccountInfoController {
 
     @RequestMapping(method = RequestMethod.GET)
     public @ResponseBody Iterable<AccountInfo> getAllUsers() {
-        // This returns a JSON or XML with the users
         return accountInfoRepository.findAll();
     }
 
