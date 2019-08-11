@@ -1,4 +1,5 @@
 import application.Application;
+import application.MessageOutputFactory;
 import application.RedisService;
 import application.adapter.output.MessageOutputAdapter;
 import application.Session;
@@ -36,6 +37,8 @@ public class orderTest {
     private ProductRepository productRepository;
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private MessageOutputFactory messageOutputFactory;
     private RequestBuilder createOrderRequest,deleteOrderRequest;
     private Order order;
     private Product product;
@@ -47,7 +50,7 @@ public class orderTest {
         session=redisService.createSession(sessionKey);
         gson=new Gson();
         product = new Product("Cake","TEST",1000);
-        order=new Order(product,"GP","08:56");
+        order=new Order(product,3,"GP","08:56");
         order.setPay(true);
         order.setFinish(true);
         productRepository.save(product);
@@ -67,14 +70,16 @@ public class orderTest {
 
     @Test
     public void addOrder()throws Exception{
-        this.mockMvc.perform(createOrderRequest).andExpect(content().json(gson.toJson(new MessageOutputAdapter(true,"success"))));
+        this.mockMvc.perform(createOrderRequest)
+                .andExpect(content().json(gson.toJson(messageOutputFactory.success())));
         Order order=orderRepository.findAll().iterator().next();
-        assertEquals("GP", order.getAccountName());
-        assertEquals(false,order.getFinish());
-        assertEquals(false,order.getPay());
+        assertEquals(this.order.getAccountName(), order.getAccountName());
+        assertFalse(order.getFinish());
+        assertFalse(order.getPay());
+        assertEquals(this.order.getNumber(),order.getNumber());
         this.redisService.deleteSession(session.getKey());
         this.mockMvc.perform(createOrderRequest)
-                .andExpect(content().json(gson.toJson(new MessageOutputAdapter(false,"Session Timeout"))));
+                .andExpect(content().json(gson.toJson(messageOutputFactory.sessionTimeout())));
     }
 
     @Test
@@ -82,11 +87,13 @@ public class orderTest {
         this.mockMvc.perform(createOrderRequest);
         Integer orderId=orderRepository.findAll().iterator().next().getId();
         deleteOrderRequest=delete("/order/"+orderId)
-                .contentType(MediaType.APPLICATION_JSON_UTF8);
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .param("sessionKey",session.getKey())
+                .param("sessionValue",session.getValue());
         this.mockMvc.perform(deleteOrderRequest)
-                .andExpect(content().json(gson.toJson(new MessageOutputAdapter(true,"success"))));
+                .andExpect(content().json(gson.toJson(messageOutputFactory.success())));
         assertFalse(orderRepository.findById(orderId).isPresent());
         this.mockMvc.perform(deleteOrderRequest)
-                .andExpect(content().json(gson.toJson(new MessageOutputAdapter(false,"order not found"))));
+                .andExpect(content().json(gson.toJson(messageOutputFactory.dataNotFound("order"))));
     }
 }

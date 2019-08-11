@@ -1,15 +1,20 @@
 package application.controllers;
 
+import application.MessageOutputFactory;
 import application.RedisService;
 import application.Session;
-import application.adapter.output.AccountOutputAdapter;
+import application.adapter.output.DataOutputAdapter;
 import application.adapter.output.MessageOutputAdapter;
 import application.adapter.output.SessionOutputAdapter;
 import application.entities.Account;
+import application.entities.AccountInfo;
+import application.repositories.AccountInfoRepository;
 import application.repositories.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -19,7 +24,11 @@ public class AccountController {
     @Autowired
     private AccountRepository accountRepository;
     @Autowired
+    private AccountInfoRepository accountInfoRepository;
+    @Autowired
     private RedisService sessionService;
+    @Autowired
+    private MessageOutputFactory messageOutputFactory;
     @RequestMapping(method = RequestMethod.GET, path="/test")
     public @ResponseBody String testRequest(){
         return "success";
@@ -29,15 +38,15 @@ public class AccountController {
     MessageOutputAdapter createAccount(@RequestBody Optional<Account> account){
         Optional<String>accountName=Optional.ofNullable(account.get().getAccountName());
         if(!accountName.isPresent())
-            return new MessageOutputAdapter(false,"Account Name is not present");
+            return messageOutputFactory.fieldNotPresent("accountName");
         else{
             Account newAccount=account.get();
             Boolean isUsed = accountRepository.findByAccountName(newAccount.getAccountName()).isPresent();
             if (isUsed)
-                return new MessageOutputAdapter(false,"This account had been used");
+                return messageOutputFactory.accountHasBeenUsed();
             else {
                 accountRepository.save(newAccount);
-                return new MessageOutputAdapter(true,"success");
+                return messageOutputFactory.success();
             }
         }
     }
@@ -48,14 +57,14 @@ public class AccountController {
         if(sessionService.isSessionExist(sessionKey,sessionValue)){
             Optional<Account> account=accountRepository.findByAccountName(accountName);
             if(!account.isPresent())
-                return new MessageOutputAdapter(false,"Account not found");
+                return messageOutputFactory.dataNotFound("account");
             else {
                 accountRepository.delete(account.get());
-                return new MessageOutputAdapter(true,"success");
+                return messageOutputFactory.success();
             }
         }
         else{
-            return new MessageOutputAdapter(false,"Session Timeout");
+            return messageOutputFactory.sessionTimeout();
         }
     }
 
@@ -66,10 +75,10 @@ public class AccountController {
         MessageOutputAdapter messageOutputAdapter =new MessageOutputAdapter(false);
         if(account.isPresent()) {
             Session session=sessionService.createSession(accountName);
-            return new SessionOutputAdapter(true, "success",session);
+            return new SessionOutputAdapter(true,"success",session);
         }
         else
-            return new MessageOutputAdapter(false,"Account or Password Error");
+            return messageOutputFactory.accountOrPasswordError();
     }
 
     @RequestMapping(path="/logout", method = RequestMethod.POST)
@@ -78,28 +87,31 @@ public class AccountController {
         Optional<Account> account=accountRepository.findByAccountName(accountName);
         if(account.isPresent()) {
             sessionService.deleteSession(accountName);
-            return new MessageOutputAdapter(true, "success");
+            return messageOutputFactory.success();
         }
         else
-            return new MessageOutputAdapter(false,"Account or Password Error");
+            return messageOutputFactory.accountOrPasswordError();
     }
 
     @RequestMapping(method=RequestMethod.GET)
     public @ResponseBody
     MessageOutputAdapter getAll(@RequestParam String sessionKey, @RequestParam String sessionValue){
         if(!sessionService.isSessionExist(sessionKey,sessionValue)) {
-            return new MessageOutputAdapter(false,"Session Timeout");
+            return messageOutputFactory.sessionTimeout();
         }
-        return new AccountOutputAdapter(true,"success",accountRepository.findAll());
+        List<Account>accounts=accountRepository.findAll();
+        return new DataOutputAdapter(true,"success",accounts.toArray(new Account[accounts.size()]));
     }
 
     @RequestMapping(path="/{accountName}", method=RequestMethod.GET)
-    public @ResponseBody Account getAccount(@PathVariable String accountName) {
+    public @ResponseBody MessageOutputAdapter getAccount(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName) {
+        if(!sessionService.isSessionExist(sessionKey,sessionValue))
+            return messageOutputFactory.sessionTimeout();
         Optional<Account> account = accountRepository.findByAccountName(accountName);
         if (account.isPresent())
-            return account.get();
+            return new DataOutputAdapter(true,"success", new Account[]{account.get()});
         else
-            return null;
+            return messageOutputFactory.dataNotFound("account");
     }
 
     @PatchMapping(path="/{accountName}")
@@ -107,17 +119,23 @@ public class AccountController {
     MessageOutputAdapter update(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName, @RequestBody Account account) {
         Optional<Account> existedAccount = accountRepository.findByAccountName(accountName);
         if(!sessionService.isSessionExist(sessionKey,sessionValue))
-            return new MessageOutputAdapter(false,"Session Timeout");
+            return messageOutputFactory.sessionTimeout();
         else{
             if(!existedAccount.isPresent())
                 accountRepository.save(account);
             else{
                 Account updatedAccount = existedAccount.get();
+                AccountInfo oldInfo=updatedAccount.getInfo();
                 updatedAccount.setAccount(account);
                 accountRepository.save(updatedAccount);
+                accountInfoRepository.delete(oldInfo);
             }
-            return new MessageOutputAdapter(true, "success");
+            return messageOutputFactory.success();
         }
+    }
+    public MessageOutputAdapter checkAccount(Account account){
+        String errorMsg="";
+        return new MessageOutputAdapter(false,errorMsg);
     }
 
 }

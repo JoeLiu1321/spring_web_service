@@ -1,17 +1,20 @@
-package application.adapter;
+package application.adapter.data;
 
 import application.entities.Account;
 import application.entities.AccountInfo;
+import application.entities.Role;
 
-public class AccountAdapter {
+import java.util.Optional;
+
+public class AccountAdapter implements DataAdapter {
     private String accountName;
-    private Integer privilege;
+    private Role role;
     private String identify;
     private String name;
     private String phone;
     private String address;
     private String email;
-
+    private AccountAdapter inviteAccount;
 
     public AccountAdapter(Account account) {
         parse(account);
@@ -19,14 +22,25 @@ public class AccountAdapter {
 
     public void parse(Account account){
         AccountInfo accountInfo=account.getInfo();
-
         accountName=account.getAccountName();
-        privilege=account.getPrivilege();
+        role =accountInfo.getRole();
+        boolean hasInviteAccount=Optional.ofNullable(accountInfo.getInviteAccount()).isPresent();
+        if(hasInviteAccount)
+            inviteAccount=new AccountAdapter(accountInfo.getInviteAccount());
         identify=accountInfo.getIdentify();
         name=accountInfo.getName();
         phone=accountInfo.getPhone();
         address=accountInfo.getAddress();
         email=accountInfo.getEmail();
+    }
+
+
+    public AccountAdapter getInviteAccount() {
+        return inviteAccount;
+    }
+
+    public void setInviteAccount(AccountAdapter inviteAccount) {
+        this.inviteAccount = inviteAccount;
     }
 
     public String getAccountName() {
@@ -37,12 +51,12 @@ public class AccountAdapter {
         this.accountName = accountName;
     }
 
-    public Integer getPrivilege() {
-        return privilege;
+    public Role getRole() {
+        return role;
     }
 
-    public void setPrivilege(Integer privilege) {
-        this.privilege = privilege;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public String getIdentify() {
@@ -84,4 +98,5 @@ public class AccountAdapter {
     public void setEmail(String email) {
         this.email = email;
     }
+
 }

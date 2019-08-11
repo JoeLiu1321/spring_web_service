@@ -12,18 +12,30 @@ public class Order {
     @OneToOne
     @JoinColumn(name="productId")
     private Product product;
+    private Integer number;
     private String accountName;
     private String time;
     private Boolean isPay;
     private Boolean isFinish;
 
-    public Order(){}
-    public Order(Product product, String accountName, String time) {
-        this.product = product;
-        this.accountName = accountName;
-        this.time = time;
-        isPay=false;
-        isFinish=false;
+    public Order(){
+        setPay(false);
+        setFinish(false);
+    }
+    public Order(Product product, Integer number, String accountName, String time) {
+        this();
+        setProduct(product);
+        setNumber(number);
+        setAccountName(accountName);
+        setTime(time);
+    }
+
+    public Integer getNumber() {
+        return number;
+    }
+
+    public void setNumber(Integer number) {
+        this.number = number;
     }
 
     public Boolean getPay() {

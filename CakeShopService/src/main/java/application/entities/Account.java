@@ -8,16 +8,14 @@ public class Account {
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
     private Integer id;
-    @Column(unique = true)
+    @Column(unique = true,length = 20)
     private String accountName;
+    @Column(length = 15)
     private String password;
-    @Column(columnDefinition = "integer default 1")
-    private Integer privilege;
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name="accountId")
     private AccountInfo info;
     public Account(){
-        privilege=0;
         info=new AccountInfo();
     }
 
@@ -29,20 +27,11 @@ public class Account {
 
     public void setAccount(Account account){
         setPassword(account.getPassword());
-        setPrivilege(account.getPrivilege());
         setInfo(account.getInfo());
     }
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public Integer getPrivilege() {
-        return privilege;
-    }
-
-    public void setPrivilege(Integer privilege) {
-        this.privilege = privilege;
     }
 
     public String getAccountName() {

@@ -1,5 +1,6 @@
 package application.controllers;
 
+import application.MessageOutputFactory;
 import application.RedisService;
 import application.adapter.output.MessageOutputAdapter;
 import application.Session;
@@ -20,20 +21,22 @@ public class OrderController {
     @Autowired
     private OrderRepository orderRepository;
     @Autowired
-    private RedisService redisService;
+    private RedisService sessionService;
+    @Autowired
+    private MessageOutputFactory messageOutputFactory;
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody
     MessageOutputAdapter createOrder(@RequestParam String sessionKey, @RequestParam String sessionValue, @RequestBody Order order){
         Session s=new Session(sessionKey,sessionValue);
-        if(!redisService.isSessionExist(s))
-            return new MessageOutputAdapter(false,"Session Timeout");
+        if(!sessionService.isSessionExist(s))
+            return messageOutputFactory.sessionTimeout();
         order.setFinish(false);
         order.setPay(false);
         LocalDateTime localDateTime=LocalDateTime.now();
         DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm");
         order.setTime(dateTimeFormatter.format(localDateTime));
         orderRepository.save(order);
-        return new MessageOutputAdapter(true,"success");
+        return messageOutputFactory.success();
     }
 
     @RequestMapping(method = RequestMethod.GET)
@@ -49,14 +52,17 @@ public class OrderController {
 
     @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
     public @ResponseBody
-    MessageOutputAdapter deleteOrder(@PathVariable Integer id){
-        Optional<Order> order=orderRepository.findById(id);
-        if(order.isPresent()) {
-            orderRepository.delete(order.get());
-            return new MessageOutputAdapter(true, "success");
+    MessageOutputAdapter deleteOrder(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable Integer id){
+        if(!sessionService.isSessionExist(sessionKey,sessionValue))
+            return messageOutputFactory.sessionTimeout();
+        else {
+            Optional<Order> order = orderRepository.findById(id);
+            if (order.isPresent()) {
+                orderRepository.delete(order.get());
+                return messageOutputFactory.success();
+            } else
+                return messageOutputFactory.dataNotFound("order");
         }
-        else
-            return new MessageOutputAdapter(false,"order not found");
     }
 
 }

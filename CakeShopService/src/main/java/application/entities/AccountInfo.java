@@ -7,11 +7,22 @@ public class AccountInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+    @Column(length = 10)
     private String identify;
+    @Column(length = 10)
     private String name;
+    @Column(length = 11)
     private String phone;
+    @Column(length = 20)
     private String address;
+    @Column(length = 25)
     private String email;
+    @ManyToOne
+    @JoinColumn(name="inviteAccount")
+    private Account inviteAccount;
+    @ManyToOne
+    @JoinColumn(name="roleId")
+    private Role role;
 
     public AccountInfo(){
         identify="";
@@ -19,6 +30,7 @@ public class AccountInfo {
         phone="";
         address="";
         email="";
+        role=new Role();
     }
 
     public AccountInfo(String name, String phone, String address, String email) {
@@ -27,6 +39,22 @@ public class AccountInfo {
         this.phone = phone;
         this.address = address;
         this.email = email;
+    }
+
+    public Account getInviteAccount() {
+        return inviteAccount;
+    }
+
+    public void setInviteAccount(Account inviteAccount) {
+        this.inviteAccount = inviteAccount;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public String getIdentify() {
