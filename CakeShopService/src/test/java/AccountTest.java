@@ -1,11 +1,11 @@
 import application.*;
-import application.adapter.output.DataOutputAdapter;
+import application.adapter.data.AccountAdapter;
 import application.adapter.output.MessageOutputAdapter;
-import application.adapter.output.SessionOutputAdapter;
+import application.adapter.output.ObjectOutputAdapter;
+import application.controllers.AccountController;
 import application.entities.Account;
 import application.entities.AccountInfo;
 import application.entities.Role;
-import application.repositories.AccountRepository;
 import com.google.gson.Gson;
 import org.junit.After;
 import org.junit.Before;
@@ -19,7 +19,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
 
-import java.util.List;
 import java.util.Optional;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -28,15 +27,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = Application.class)
 @AutoConfigureMockMvc
-public class accountTest {
+public class AccountTest {
+    @Autowired
+    private AccountController accountController;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private RedisService redisService;
+    private RepositoryFacade facade;
     @Autowired
-    private AccountRepository accountRepository;
-    @Autowired
-    private MessageOutputFactory messageOutputFactory;
+    private ResponseFactory responseFactory;
     private Account account,inviteAccount;
     private AccountInfo accountInfo;
     private RequestBuilder addAccountRequest,deleteAccountRequest,loginRequest, getAllAccountRequest, getAccountRequest;
@@ -47,7 +46,7 @@ public class accountTest {
         gson=new Gson();
         String name="Joe",phone="0922",address="no.9"
                 ,email="test@gmail.com",password="tim98765";
-        inviteAccount=accountRepository.findByAccountName("admin").get();
+        inviteAccount= facade.findAccount("admin").get();
         account=new Account("tim98765",password);
         accountInfo=new AccountInfo(name,phone,address,email);
         accountInfo.setInviteAccount(inviteAccount);
@@ -55,7 +54,7 @@ public class accountTest {
         addAccountRequest=post("/account")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(gson.toJson(account));
-        session=redisService.createSession(account.getAccountName());
+        session= facade.createSession(account.getAccountName());
         loginRequest=post("/account/login")
                 .param("accountName",account.getAccountName())
                 .param("password",account.getPassword());
@@ -72,99 +71,95 @@ public class accountTest {
 
     @After
     public void tearDown()throws Exception{
-        Optional<Account> account=accountRepository.findByAccountName(this.account.getAccountName());
-        if (account.isPresent())
-            accountRepository.delete(account.get());
-        redisService.deleteSession(this.account.getAccountName());
+        facade.deleteAccount(account.getAccountName());
+        facade.deleteSession(session);
     }
 
     @Test
     public void deleteNotExistedAccount()throws Exception{
-        mockMvc.perform(deleteAccountRequest).andExpect(content().string(gson.toJson(messageOutputFactory.dataNotFound("account"))));
+        mockMvc.perform(deleteAccountRequest).andExpect(content().string(gson.toJson(responseFactory.dataNotFound("account"))));
     }
 
     @Test
     public void deleteExistedAccount()throws Exception{
         mockMvc.perform(addAccountRequest);
         mockMvc.perform(deleteAccountRequest)
-                .andExpect(content().string(gson.toJson(messageOutputFactory.success())));
-        assertEquals(Optional.empty(),accountRepository.findByAccountName(account.getAccountName()));
+                .andExpect(content().string(gson.toJson(responseFactory.success())));
+        assertEquals(Optional.empty(), facade.findAccount(account.getAccountName()));
     }
 
     @Test
-    public void addDuplicateAccount()throws Exception{
-        this.mockMvc.perform(addAccountRequest).andExpect(content().string(gson.toJson(messageOutputFactory.success())));
-        this.mockMvc.perform(addAccountRequest).andExpect(content().string(gson.toJson(messageOutputFactory.accountHasBeenUsed())));
-        assertEquals(account.getAccountName(),accountRepository.findByAccountName(account.getAccountName()).get().getAccountName());
+    public void createDuplicateAccount()throws Exception{
+        facade.createAccount(account);
+        this.mockMvc.perform(addAccountRequest)
+                .andExpect(content().string(gson.toJson(responseFactory.accountHasBeenUsed())));
     }
 
     @Test
-    public void addAccount() throws Exception{
-        this.mockMvc.perform(addAccountRequest).andExpect(content().json(gson.toJson(messageOutputFactory.success())));
-        assertEquals(account.getAccountName(),accountRepository.findByAccountName(account.getAccountName()).get().getAccountName());
-        assertEquals(account.getInfo().getAddress(),accountRepository.findByAccountName(account.getAccountName()).get().getInfo().getAddress());
+    public void createAccount() throws Exception{
+        this.mockMvc.perform(addAccountRequest)
+                .andExpect(content().json(gson.toJson(responseFactory.success())));
+        assertEquals(account.getAccountName(), facade.findAccount(account.getAccountName()).get().getAccountName());
+        assertEquals(account.getInfo().getAddress(), facade.findAccount(account.getAccountName()).get().getInfo().getAddress());
         this.mockMvc.perform(post("/account")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(gson.toJson(new Account())))
-                .andExpect(content().json(gson.toJson(messageOutputFactory.fieldNotPresent("accountName"))));
-        this.mockMvc.perform(addAccountRequest).andExpect(content().json(gson.toJson(messageOutputFactory.accountHasBeenUsed())));
+                .andExpect(content().json(gson.toJson(responseFactory.fieldNotPresent("accountName"))));
+        this.mockMvc.perform(addAccountRequest).andExpect(content().json(gson.toJson(responseFactory.accountHasBeenUsed())));
     }
 
     @Test
     public void getAllAccount()throws Exception{
         mockMvc.perform(addAccountRequest);
-        List<Account> expectAccounts=accountRepository.findAll();
-        MessageOutputAdapter messageOutputAdapter=new DataOutputAdapter(true,"success",expectAccounts.toArray(new Account[expectAccounts.size()]));
         mockMvc.perform(getAllAccountRequest)
-                .andExpect(content().json(gson.toJson(messageOutputAdapter)));
+                .andExpect(content().json(gson.toJson(responseFactory.success())));
     }
 
     @Test
     public void getAccount()throws Exception{
         mockMvc.perform(getAccountRequest)
-                .andExpect(content().json(gson.toJson(messageOutputFactory.dataNotFound("account"))));
-        mockMvc.perform(addAccountRequest);
-        MessageOutputAdapter messageOutputAdapter=new DataOutputAdapter(true,"success", new Account[]{account});
+                .andExpect(content().json(gson.toJson(responseFactory.dataNotFound("account"))));
+        Integer accountId= facade.createAccount(account);
+        AccountAdapter expectedData=new AccountAdapter(facade.findAccount(accountId).get());
+        MessageOutputAdapter expectedResult= responseFactory.outputData(expectedData);
         mockMvc.perform(getAccountRequest)
-                .andExpect(content().json(gson.toJson(messageOutputAdapter)));
+                .andExpect(content().json(gson.toJson(expectedResult)));
     }
 
     @Test
     public void login()throws Exception{
-
         mockMvc.perform(loginRequest)
-                .andExpect(content().json(gson.toJson(messageOutputFactory.accountOrPasswordError())));
-        mockMvc.perform(addAccountRequest);
-        MessageOutputAdapter messageOutputAdapter =new SessionOutputAdapter(true,"success",session);
+                .andExpect(content().json(gson.toJson(responseFactory.accountOrPasswordError())));
+        facade.createAccount(account);
+        MessageOutputAdapter messageOutputAdapter =new ObjectOutputAdapter(true,"success",session);
         mockMvc.perform(loginRequest)
                 .andExpect(content().json(gson.toJson(messageOutputAdapter)));
     }
 
     @Test
     public void logout()throws Exception{
-        RequestBuilder logout=post("/account/logout")
-                .param("accountName",account.getAccountName());
-        mockMvc.perform(logout).andExpect(content().json(gson.toJson(messageOutputFactory.accountOrPasswordError())));
+        RequestBuilder logout=post("/account/logout/"+account.getAccountName());
+        mockMvc.perform(logout).andExpect(content().json(gson.toJson(responseFactory.accountOrPasswordError())));
         mockMvc.perform(addAccountRequest);
-        mockMvc.perform(logout).andExpect(content().json(gson.toJson(messageOutputFactory.success())));
-        assertFalse(redisService.isSessionExist(session));
+        mockMvc.perform(logout).andExpect(content().json(gson.toJson(responseFactory.success())));
+        assertFalse(facade.isSessionExist(session.getKey(),session.getValue()));
     }
 
     @Test
     public void requestWithNoSession()throws Exception{
-        redisService.deleteSession(account.getAccountName());
+        facade.deleteSession(session);
         mockMvc.perform(deleteAccountRequest)
-            .andExpect(content().string(gson.toJson(messageOutputFactory.sessionTimeout())));
+            .andExpect(content().string(gson.toJson(responseFactory.sessionTimeout())));
         mockMvc.perform(patch("/account/"+account.getAccountName())
                 .param("sessionKey",session.getKey())
                 .param("sessionValue",session.getValue())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(gson.toJson(account)))
-                .andExpect(content().string(gson.toJson(messageOutputFactory.sessionTimeout())));
+                .andExpect(content().string(gson.toJson(responseFactory.sessionTimeout())));
         mockMvc.perform(getAllAccountRequest)
-                .andExpect(content().string(gson.toJson(messageOutputFactory.sessionTimeout())));
+                .andExpect(content().string(gson.toJson(responseFactory.sessionTimeout())));
         mockMvc.perform(getAccountRequest)
-                .andExpect(content().string(gson.toJson(messageOutputFactory.sessionTimeout())));
+                .andExpect(content().string(gson.toJson(responseFactory.sessionTimeout())));
     }
 
     @Test
@@ -182,10 +177,10 @@ public class accountTest {
                 .param("sessionValue",session.getValue())
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(gson.toJson(this.account)))
-                .andExpect(content().json(gson.toJson(messageOutputFactory.success())));
+                .andExpect(content().json(gson.toJson(responseFactory.success())));
 
         String accountName=this.account.getAccountName();
-        Account account=accountRepository.findByAccountName(accountName).get();
+        Account account= facade.findAccount(accountName).get();
         AccountInfo actualAccountInfo=account.getInfo();
         assertEquals(newName,actualAccountInfo.getName());
         assertEquals(newPassword,account.getPassword());
@@ -203,8 +198,26 @@ public class accountTest {
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(gson.toJson(account));
         mockMvc.perform(updateRequest)
-                .andExpect(content().string(gson.toJson(messageOutputFactory.success())));
-        boolean isAccountExist=accountRepository.findByAccountName(account.getAccountName()).isPresent();
+                .andExpect(content().json(gson.toJson(responseFactory.success())));
+        boolean isAccountExist= facade.findAccount(account.getAccountName()).isPresent();
         assertTrue(isAccountExist);
+    }
+
+    @Test
+    public void creteAccountTest(){
+        MessageOutputAdapter expectedResult= responseFactory.success();
+        MessageOutputAdapter actualResult=accountController.createAccount(account);
+        assertEquals(expectedResult.getStatus(),actualResult.getStatus());
+        assertEquals(expectedResult.getMessage(),actualResult.getMessage());
+    }
+
+    @Test
+    public void getAccountTest(){
+        accountController.createAccount(account);
+        MessageOutputAdapter expectedResult= responseFactory.success();
+        ObjectOutputAdapter actualResult=(ObjectOutputAdapter) accountController.getAccount(session.getKey(),session.getValue(),account.getAccountName());
+        AccountAdapter actualAccount=(AccountAdapter) actualResult.getObject();
+        assertEquals(expectedResult.getStatus(),actualResult.getStatus());
+        assertEquals(account.getAccountName(),actualAccount.getAccountName());
     }
 }

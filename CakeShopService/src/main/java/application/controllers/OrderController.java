@@ -1,11 +1,12 @@
 package application.controllers;
 
-import application.MessageOutputFactory;
-import application.RedisService;
+import application.ResponseFactory;
+import application.RepositoryFacade;
+import application.RoleEnum;
 import application.adapter.output.MessageOutputAdapter;
-import application.Session;
+import application.entities.Account;
 import application.entities.Order;
-import application.repositories.OrderRepository;
+import application.entities.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -19,49 +20,65 @@ import java.util.Optional;
 @RequestMapping(path="/order")
 public class OrderController {
     @Autowired
-    private OrderRepository orderRepository;
+    private ResponseFactory responseFactory;
     @Autowired
-    private RedisService sessionService;
-    @Autowired
-    private MessageOutputFactory messageOutputFactory;
+    private RepositoryFacade facade;
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody
     MessageOutputAdapter createOrder(@RequestParam String sessionKey, @RequestParam String sessionValue, @RequestBody Order order){
-        Session s=new Session(sessionKey,sessionValue);
-        if(!sessionService.isSessionExist(s))
-            return messageOutputFactory.sessionTimeout();
-        order.setFinish(false);
-        order.setPay(false);
+        if(!facade.isSessionExist(sessionKey, sessionValue))
+            return responseFactory.sessionTimeout();
         LocalDateTime localDateTime=LocalDateTime.now();
         DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm");
         order.setTime(dateTimeFormatter.format(localDateTime));
-        orderRepository.save(order);
-        return messageOutputFactory.success();
+        Integer orderId=facade.createOrder(order);
+        return responseFactory.outputData(orderId);
     }
 
     @RequestMapping(method = RequestMethod.GET)
-    public @ResponseBody Iterable<Order> getAllOrder(){
-        return orderRepository.findAll();
+    public @ResponseBody MessageOutputAdapter getAllOrder(@RequestParam String sessionKey, @RequestParam String sessionValue){
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
+        else
+            return responseFactory.outputData(facade.findOrder());
     }
 
     @RequestMapping(path = "/{id}", method = RequestMethod.GET)
     public @ResponseBody
-    Optional<Order> getOrder(@PathVariable Integer id){
-        return orderRepository.findById(id);
+    MessageOutputAdapter getOrder(@PathVariable Integer id){
+        Optional<Order>order=facade.findOrder(id);
+        if(order.isPresent())
+            return responseFactory.outputData(order.get());
+        else
+            return responseFactory.dataNotFound("order");
+    }
+
+    @RequestMapping(path = "/{accountName}", method = RequestMethod.GET, params = {"sessionKey","sessionValue"})
+    public @ResponseBody
+    MessageOutputAdapter getOrder(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName){
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
+        else {
+            Role userRole=facade.findAccount(sessionKey).get().getInfo().getRole();
+            if(userRole.isEqual(RoleEnum.ADMIN) || userRole.isEqual(RoleEnum.EMPLOYEE))
+                return responseFactory.outputData(facade.findOrder(accountName));
+            else
+                return responseFactory.outputData(facade.findOrder(sessionKey));
+        }
     }
 
     @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
     public @ResponseBody
     MessageOutputAdapter deleteOrder(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable Integer id){
-        if(!sessionService.isSessionExist(sessionKey,sessionValue))
-            return messageOutputFactory.sessionTimeout();
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
         else {
-            Optional<Order> order = orderRepository.findById(id);
+            Optional<Order> order = facade.findOrder(id);
             if (order.isPresent()) {
-                orderRepository.delete(order.get());
-                return messageOutputFactory.success();
+                facade.deleteOrder(id);
+                return responseFactory.success();
             } else
-                return messageOutputFactory.dataNotFound("order");
+                return responseFactory.dataNotFound("order");
         }
     }
 

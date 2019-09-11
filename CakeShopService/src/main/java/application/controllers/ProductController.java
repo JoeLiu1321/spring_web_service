@@ -1,8 +1,10 @@
 package application.controllers;
 
+import application.ResponseFactory;
+import application.RepositoryFacade;
 import application.adapter.output.MessageOutputAdapter;
+import application.adapter.output.ObjectOutputAdapter;
 import application.entities.Product;
-import application.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -14,59 +16,60 @@ import java.util.Optional;
 @RequestMapping(path="/product")
 public class ProductController {
     @Autowired
-    ProductRepository productRepository;
-
+    private RepositoryFacade facade;
+    @Autowired
+    private ResponseFactory responseFactory;
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody
-    MessageOutputAdapter createProduct(@RequestBody Product product){
-        productRepository.save(product);
-        return new MessageOutputAdapter(true,"success");
+    MessageOutputAdapter createProduct(@RequestParam String sessionKey, @RequestParam String sessionValue, @RequestBody Product product){
+       if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
+       else {
+           facade.createProduct(product);
+           return new ObjectOutputAdapter(true, "success", product.getId());
+       }
     }
 
     @RequestMapping(method = RequestMethod.GET)
-    public @ResponseBody Iterable<Product> getAllProduct(){
-        return productRepository.findAll();
+    public @ResponseBody MessageOutputAdapter getAllProduct(){
+        return responseFactory.outputData(facade.findProduct());
     }
 
     @RequestMapping(path = "/{id}", method = RequestMethod.GET)
-    public @ResponseBody Optional<Product> getProduct(@PathVariable Integer id){
-        return productRepository.findById(id);
+    public @ResponseBody MessageOutputAdapter getProduct(@PathVariable Integer id){
+        Optional<Product>product= facade.findProduct(id);
+        if(product.isPresent())
+            return responseFactory.outputData(product.get());
+        else
+            return responseFactory.dataNotFound("product");
     }
 
-//    @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
-//    public @ResponseBody String deleteProduct(@PathVariable Integer id){
-//        try {
-//            productRepository.deleteById(id);
-//            return "success";
-//        }catch (Exception e){
-//            return "fail:product not found";
-//        }
-//    }
-
-    @RequestMapping(path="/{name}", method=RequestMethod.DELETE)
-    public @ResponseBody
-    MessageOutputAdapter deleteProduct(@PathVariable String name){
-        try {
-            Optional<Product> product=productRepository.findByName(name);
-            productRepository.delete(product.get());
-            return new MessageOutputAdapter(true,"success");
-        }catch (Exception e){
-            return new MessageOutputAdapter(false,"product not found");
+    @RequestMapping(path="/{id}", method=RequestMethod.DELETE)
+    public @ResponseBody MessageOutputAdapter deleteProduct(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable Integer id){
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
+        else {
+            facade.deleteProduct(id);
+            return responseFactory.success();
         }
     }
 
     @RequestMapping(path="/{id}", method=RequestMethod.PATCH)
     public @ResponseBody
-    MessageOutputAdapter updateProduct(@PathVariable Integer id, @RequestBody Optional<Product> product){
-        if(product.isPresent() && product.get().getId()!=null) {
-            Optional<Product> oldProduct=productRepository.findById(product.get().getId());
-            if(oldProduct.isPresent()) {
-                Product newProduct=oldProduct.get();
-                newProduct.setProduct(product.get());
-                productRepository.save(newProduct);
-                return new MessageOutputAdapter(true,"success");
+    MessageOutputAdapter updateProduct(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable Integer id, @RequestBody Product productData){
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
+        else {
+            Optional<Product> oldProduct = facade.findProduct(id);
+            if (oldProduct.isPresent()) {
+                Product newProduct = oldProduct.get();
+                newProduct.setProduct(productData);
+                facade.createProduct(newProduct);
+                return responseFactory.outputData(newProduct.getId());
+            } else {
+                facade.createProduct(productData);
+                return responseFactory.outputData(productData.getId());
             }
         }
-        return new MessageOutputAdapter(false,"product not found");
     }
 }

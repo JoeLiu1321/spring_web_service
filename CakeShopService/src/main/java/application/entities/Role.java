@@ -47,9 +47,17 @@ public class Role {
         this.role = role;
     }
 
-    public boolean isEqual(Role role){
-        boolean idEqual=(this.id.equals(role.id)),roleEqual=(this.role.equals(role.getRole()));
-        return idEqual && roleEqual;
+    private boolean isEqual(Role role){
+        return isEqual(role.getId(),role.getRole());
+    }
+
+    public boolean isEqual(RoleEnum roleEnum){
+        return isEqual(roleEnum.ordinal(),roleEnum.name());
+    }
+
+    private boolean isEqual(Integer id, String role){
+        boolean isIdEqual=this.id.equals(id),isRoleEqual=this.role.equals(role);
+        return isIdEqual && isRoleEqual;
     }
 
     @Override

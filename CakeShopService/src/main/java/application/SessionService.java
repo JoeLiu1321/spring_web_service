@@ -9,14 +9,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class RedisService {
+public class SessionService {
     private long timeout;
     @Autowired
     private StringRedisTemplate redisTemplate;
-    public RedisService(){
+    public SessionService(){
         timeout=15;
     }
-    public RedisService(long timeout){
+    public SessionService(long timeout){
         this.timeout=timeout;
     }
 

@@ -1,19 +1,18 @@
 package application.controllers;
 
-import application.MessageOutputFactory;
-import application.RedisService;
+import application.ResponseFactory;
 import application.Session;
-import application.adapter.output.DataOutputAdapter;
+import application.RepositoryFacade;
+import application.adapter.data.AccountAdapter;
 import application.adapter.output.MessageOutputAdapter;
-import application.adapter.output.SessionOutputAdapter;
 import application.entities.Account;
 import application.entities.AccountInfo;
 import application.repositories.AccountInfoRepository;
-import application.repositories.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,31 +21,28 @@ import java.util.Optional;
 @RequestMapping(path="/account")
 public class AccountController {
     @Autowired
-    private AccountRepository accountRepository;
+    private RepositoryFacade facade;
     @Autowired
     private AccountInfoRepository accountInfoRepository;
     @Autowired
-    private RedisService sessionService;
-    @Autowired
-    private MessageOutputFactory messageOutputFactory;
+    private ResponseFactory responseFactory;
     @RequestMapping(method = RequestMethod.GET, path="/test")
     public @ResponseBody String testRequest(){
         return "success";
     }
     @RequestMapping(method = RequestMethod.POST)
     public @ResponseBody
-    MessageOutputAdapter createAccount(@RequestBody Optional<Account> account){
-        Optional<String>accountName=Optional.ofNullable(account.get().getAccountName());
+    MessageOutputAdapter createAccount(@RequestBody Account account){
+        Optional<String>accountName=Optional.ofNullable(account.getAccountName());
         if(!accountName.isPresent())
-            return messageOutputFactory.fieldNotPresent("accountName");
+            return responseFactory.fieldNotPresent("accountName");
         else{
-            Account newAccount=account.get();
-            Boolean isUsed = accountRepository.findByAccountName(newAccount.getAccountName()).isPresent();
+            boolean isUsed = facade.findAccount(accountName.get()).isPresent();
             if (isUsed)
-                return messageOutputFactory.accountHasBeenUsed();
+                return responseFactory.accountHasBeenUsed();
             else {
-                accountRepository.save(newAccount);
-                return messageOutputFactory.success();
+                Integer accountId= facade.createAccount(account);
+                return responseFactory.outputData(accountId);
             }
         }
     }
@@ -54,88 +50,94 @@ public class AccountController {
     @RequestMapping(path="/{accountName}", method = RequestMethod.DELETE)
     public @ResponseBody
     MessageOutputAdapter deleteAccount(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName){
-        if(sessionService.isSessionExist(sessionKey,sessionValue)){
-            Optional<Account> account=accountRepository.findByAccountName(accountName);
+        if(facade.isSessionExist(sessionKey,sessionValue)){
+            Optional<Account> account= facade.findAccount(accountName);
             if(!account.isPresent())
-                return messageOutputFactory.dataNotFound("account");
+                return responseFactory.dataNotFound("account");
             else {
-                accountRepository.delete(account.get());
-                return messageOutputFactory.success();
+                facade.deleteAccount(account.get().getAccountName());
+                return responseFactory.success();
             }
         }
         else{
-            return messageOutputFactory.sessionTimeout();
+            return responseFactory.sessionTimeout();
         }
     }
 
     @RequestMapping(path="/login", method = RequestMethod.POST)
     public @ResponseBody
     MessageOutputAdapter login(@RequestParam String accountName, @RequestParam String password){
-        Optional<Account> account=accountRepository.findByAccountNameAndPassword(accountName,password);
-        MessageOutputAdapter messageOutputAdapter =new MessageOutputAdapter(false);
-        if(account.isPresent()) {
-            Session session=sessionService.createSession(accountName);
-            return new SessionOutputAdapter(true,"success",session);
+        if(facade.login(accountName,password)) {
+            Session session= facade.createSession(accountName);
+            return responseFactory.outputData(session);
         }
         else
-            return messageOutputFactory.accountOrPasswordError();
+            return responseFactory.accountOrPasswordError();
     }
 
-    @RequestMapping(path="/logout", method = RequestMethod.POST)
+    @RequestMapping(path="/logout/{accountName}", method = RequestMethod.POST)
     public @ResponseBody
-    MessageOutputAdapter logout(@RequestParam String accountName){
-        Optional<Account> account=accountRepository.findByAccountName(accountName);
+    MessageOutputAdapter logout(@PathVariable String accountName){
+        Optional<Account> account= facade.findAccount(accountName);
         if(account.isPresent()) {
-            sessionService.deleteSession(accountName);
-            return messageOutputFactory.success();
+            facade.deleteSession(accountName);
+            return responseFactory.success();
         }
         else
-            return messageOutputFactory.accountOrPasswordError();
+            return responseFactory.accountOrPasswordError();
     }
 
     @RequestMapping(method=RequestMethod.GET)
     public @ResponseBody
     MessageOutputAdapter getAll(@RequestParam String sessionKey, @RequestParam String sessionValue){
-        if(!sessionService.isSessionExist(sessionKey,sessionValue)) {
-            return messageOutputFactory.sessionTimeout();
+        if(!facade.isSessionExist(sessionKey,sessionValue)) {
+            return responseFactory.sessionTimeout();
         }
-        List<Account>accounts=accountRepository.findAll();
-        return new DataOutputAdapter(true,"success",accounts.toArray(new Account[accounts.size()]));
+        return responseFactory.outputData(outputAccounts(facade.findAccount()));
     }
 
     @RequestMapping(path="/{accountName}", method=RequestMethod.GET)
     public @ResponseBody MessageOutputAdapter getAccount(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName) {
-        if(!sessionService.isSessionExist(sessionKey,sessionValue))
-            return messageOutputFactory.sessionTimeout();
-        Optional<Account> account = accountRepository.findByAccountName(accountName);
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
+        Optional<Account> account = facade.findAccount(accountName);
         if (account.isPresent())
-            return new DataOutputAdapter(true,"success", new Account[]{account.get()});
+            return responseFactory.outputData(outputAccount(account.get()));
         else
-            return messageOutputFactory.dataNotFound("account");
+            return responseFactory.dataNotFound("account");
     }
 
     @PatchMapping(path="/{accountName}")
     public @ResponseBody
     MessageOutputAdapter update(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName, @RequestBody Account account) {
-        Optional<Account> existedAccount = accountRepository.findByAccountName(accountName);
-        if(!sessionService.isSessionExist(sessionKey,sessionValue))
-            return messageOutputFactory.sessionTimeout();
+        Optional<Account> existedAccount = facade.findAccount(accountName);
+        if(!facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.sessionTimeout();
         else{
-            if(!existedAccount.isPresent())
-                accountRepository.save(account);
+            if(!existedAccount.isPresent()){
+                facade.createAccount(account);
+                return responseFactory.outputData(account.getId());
+            }
             else{
                 Account updatedAccount = existedAccount.get();
                 AccountInfo oldInfo=updatedAccount.getInfo();
                 updatedAccount.setAccount(account);
-                accountRepository.save(updatedAccount);
+                facade.createAccount(updatedAccount);
                 accountInfoRepository.delete(oldInfo);
+                return responseFactory.outputData(updatedAccount.getId());
             }
-            return messageOutputFactory.success();
         }
     }
-    public MessageOutputAdapter checkAccount(Account account){
-        String errorMsg="";
-        return new MessageOutputAdapter(false,errorMsg);
+
+    public Iterable<AccountAdapter> outputAccounts(Iterable<Account>accounts){
+        List<AccountAdapter> returnAccounts=new ArrayList<>();
+        for(Account account:accounts)
+            returnAccounts.add(outputAccount(account));
+        return returnAccounts;
+    }
+
+    public AccountAdapter outputAccount(Account account){
+        return new AccountAdapter(account);
     }
 
 }

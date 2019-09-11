@@ -1,7 +1,5 @@
 package application.entities;
 
-import org.springframework.data.repository.query.Param;
-
 import javax.persistence.*;
 
 @Entity
@@ -9,19 +7,28 @@ public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+    @ManyToOne
+    @JoinColumn(name="accountId")
+    private Account account;
     private String time;
     private Integer price;
-    private Boolean isPay;
 
     public Payment(){
 
     }
 
-    public Payment(String time, Integer price, Boolean isPay) {
-        this.id = id;
+    public Payment(String time, Integer price, Account account) {
+        this.account=account;
         this.time = time;
         this.price = price;
-        this.isPay = isPay;
+    }
+
+    public Account getAccount() {
+        return account;
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
     }
 
     public Integer getId() {
@@ -48,11 +55,4 @@ public class Payment {
         this.price = price;
     }
 
-    public Boolean getPay() {
-        return isPay;
-    }
-
-    public void setPay(Boolean pay) {
-        isPay = pay;
-    }
 }

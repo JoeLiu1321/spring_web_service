@@ -1,5 +1,5 @@
 import application.Application;
-import application.RedisService;
+import application.SessionService;
 import application.Session;
 import org.junit.After;
 import org.junit.Before;
@@ -13,30 +13,29 @@ import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = Application.class)
-public class RedisServiceTest {
+public class SessionServiceTest {
     @Autowired
-    private RedisService redisService;
+    private SessionService sessionService;
     private String accountName ="testKey";
     private Session session;
     @Before
     public void setUp(){
-        session=redisService.createSession(accountName);
+        session= sessionService.createSession(accountName);
     }
     @After
     public void tearDown(){
-        redisService.deleteSession(session.getKey());
+        sessionService.deleteSession(session.getKey());
     }
 
     @Test
     public void createSessionTest(){
-        assertTrue(redisService.isSessionExist(session));
-
+        assertTrue(sessionService.isSessionExist(session));
     }
 
     @Test
     public void deleteSessionTest(){
-        redisService.deleteSession(accountName);
-        assertFalse(redisService.isSessionExist(session));
+        sessionService.deleteSession(accountName);
+        assertFalse(sessionService.isSessionExist(session));
     }
 
 }

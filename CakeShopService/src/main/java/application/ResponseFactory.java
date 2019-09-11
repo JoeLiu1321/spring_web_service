@@ -1,11 +1,12 @@
 package application;
 
 import application.adapter.output.MessageOutputAdapter;
+import application.adapter.output.ObjectOutputAdapter;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MessageOutputFactory {
-    public MessageOutputFactory() {
+public class ResponseFactory {
+    public ResponseFactory() {
 
     }
 
@@ -31,6 +32,10 @@ public class MessageOutputFactory {
 
     public MessageOutputAdapter fieldNotPresent(String field){
         return new MessageOutputAdapter(false,field+" is not present");
+    }
+
+    public MessageOutputAdapter outputData(Object object){
+        return new ObjectOutputAdapter(true,"success",object);
     }
 
 }

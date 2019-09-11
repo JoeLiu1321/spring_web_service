@@ -12,15 +12,17 @@ public class Order {
     @OneToOne
     @JoinColumn(name="productId")
     private Product product;
+    @ManyToOne
+    @JoinColumn(name="paymentId")
+    private Payment payment;
     private Integer number;
     private String accountName;
     private String time;
-    private Boolean isPay;
-    private Boolean isFinish;
+    private boolean isPay;
 
     public Order(){
+        setPayment(null);
         setPay(false);
-        setFinish(false);
     }
     public Order(Product product, Integer number, String accountName, String time) {
         this();
@@ -28,6 +30,22 @@ public class Order {
         setNumber(number);
         setAccountName(accountName);
         setTime(time);
+    }
+
+    public boolean isPay() {
+        return isPay;
+    }
+
+    public void setPay(boolean pay) {
+        isPay = pay;
+    }
+
+    public Payment getPayment() {
+        return payment;
+    }
+
+    public void setPayment(Payment payment) {
+        this.payment = payment;
     }
 
     public Integer getNumber() {
@@ -38,21 +56,6 @@ public class Order {
         this.number = number;
     }
 
-    public Boolean getPay() {
-        return isPay;
-    }
-
-    public void setPay(Boolean pay) {
-        isPay = pay;
-    }
-
-    public Boolean getFinish() {
-        return isFinish;
-    }
-
-    public void setFinish(Boolean finish) {
-        isFinish = finish;
-    }
 
     public void setId(Integer id) {
         this.id = id;

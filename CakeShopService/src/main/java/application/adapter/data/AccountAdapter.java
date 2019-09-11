@@ -6,7 +6,7 @@ import application.entities.Role;
 
 import java.util.Optional;
 
-public class AccountAdapter implements DataAdapter {
+public class AccountAdapter {
     private String accountName;
     private Role role;
     private String identify;
