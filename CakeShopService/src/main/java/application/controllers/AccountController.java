@@ -8,7 +8,10 @@ import application.adapter.output.MessageOutputAdapter;
 import application.entities.Account;
 import application.entities.AccountInfo;
 import application.repositories.AccountInfoRepository;
+import jdk.nashorn.internal.runtime.options.Option;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +23,8 @@ import java.util.Optional;
 @CrossOrigin
 @RequestMapping(path="/account")
 public class AccountController {
+    @Autowired
+    private JavaMailSender mailSender;
     @Autowired
     private RepositoryFacade facade;
     @Autowired
@@ -96,13 +101,24 @@ public class AccountController {
         return responseFactory.outputData(outputAccounts(facade.findAccount()));
     }
 
-    @RequestMapping(path="/{accountName}", method=RequestMethod.GET)
+    @RequestMapping(path="/{accountName}", method=RequestMethod.GET,params = {"sessionKey","sessionValue"})
     public @ResponseBody MessageOutputAdapter getAccount(@RequestParam String sessionKey, @RequestParam String sessionValue, @PathVariable String accountName) {
         if(!facade.isSessionExist(sessionKey,sessionValue))
             return responseFactory.sessionTimeout();
         Optional<Account> account = facade.findAccount(accountName);
         if (account.isPresent())
             return responseFactory.outputData(outputAccount(account.get()));
+        else
+            return responseFactory.dataNotFound("account");
+    }
+
+    @RequestMapping(path="/{id}",method = RequestMethod.GET)
+    public @ResponseBody MessageOutputAdapter isAccountExisted(@PathVariable Integer id){
+        Optional<Account> account=facade.findAccount(id);
+        if(account.isPresent()) {
+            String name=account.get().getInfo().getName();
+            return responseFactory.outputData(name);
+        }
         else
             return responseFactory.dataNotFound("account");
     }
@@ -114,10 +130,8 @@ public class AccountController {
         if(!facade.isSessionExist(sessionKey,sessionValue))
             return responseFactory.sessionTimeout();
         else{
-            if(!existedAccount.isPresent()){
-                facade.createAccount(account);
-                return responseFactory.outputData(account.getId());
-            }
+            if(!existedAccount.isPresent())
+                return createAccount(account);
             else{
                 Account updatedAccount = existedAccount.get();
                 AccountInfo oldInfo=updatedAccount.getInfo();
@@ -127,6 +141,31 @@ public class AccountController {
                 return responseFactory.outputData(updatedAccount.getId());
             }
         }
+    }
+
+    @RequestMapping(path = "/mail/{mail}",method = RequestMethod.GET)
+    public @ResponseBody MessageOutputAdapter validateEmail(@PathVariable String mail){
+        Optional<Account> account=facade.findAccount(mail);
+        if(account.isPresent())
+            return responseFactory.accountHasBeenUsed();
+        else {
+            Session session = facade.createSession(mail);
+            String content="你的驗證碼是 : "+session.getValue()+"\n請於15分鐘內至網頁輸入,完成您的信箱驗證";
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setTo(mail);
+            msg.setSubject("味難忘甜品屋信箱驗證");
+            msg.setText(content);
+            mailSender.send(msg);
+            return responseFactory.success();
+        }
+    }
+
+    @RequestMapping(path="/session",method = RequestMethod.GET, params = {"sessionKey","sessionValue"})
+    public @ResponseBody MessageOutputAdapter checkSession(@RequestParam String sessionKey, @RequestParam String sessionValue){
+        if(facade.isSessionExist(sessionKey,sessionValue))
+            return responseFactory.success();
+        else
+            return responseFactory.sessionTimeout();
     }
 
     public Iterable<AccountAdapter> outputAccounts(Iterable<Account>accounts){

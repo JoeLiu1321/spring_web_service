@@ -4,7 +4,6 @@ import application.ResponseFactory;
 import application.RepositoryFacade;
 import application.RoleEnum;
 import application.adapter.output.MessageOutputAdapter;
-import application.entities.Account;
 import application.entities.Order;
 import application.entities.Role;
 import org.springframework.beans.factory.annotation.Autowired;
