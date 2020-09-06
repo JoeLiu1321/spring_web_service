@@ -1,30 +1,61 @@
-version: '3.1'
+version: '3.8'
 
 services:
-  db:
-    image: mysql
-    command: --default-authentication-plugin=mysql_native_password
+  mysql-db:
+    image: mysql:5.7.31
     restart: always
     ports:
       - 3306:3306
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: cake_shop
+    volumes: 
+      ["./mysql_data:/var/lib/mysql"]
+    networks: 
+      app:
+        ipv4_address: 172.16.238.10
 
   phpmyadmin:
-    depends_on:
-      - db
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin/phpmyadmin:5.0.2
     restart: always
     ports:
       - '5000:80'
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: root 
+    links: 
+      ["mysql-db:db"]
+    networks:
+      app:
+        ipv4_address: 172.16.238.9
 
-  redis:
+  redis-server:
     image: redis
     restart: always
     ports:
       - '6379:6379'
+    networks: 
+      app:
+        ipv4_address: 172.16.238.11
+  
+  app-backend:
+    build: 
+      context: ../CakeShopService
+      args: 
+        JAR_FILE: build/libs/*.jar
+    restart: always
+    ports:
+     - '8080:8080'
+    links: 
+      ["mysql-db:db","redis-server:redis"]
+    depends_on: 
+      ['mysql-db','redis-server']
+    networks: 
+      app:
+        ipv4_address: 172.16.238.12
+    
+
+networks:
+  app:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
